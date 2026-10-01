@@ -1,0 +1,5 @@
+raw_videos/
+*.mp4
+*.zip
+.DS_Store
+legacy_source/
