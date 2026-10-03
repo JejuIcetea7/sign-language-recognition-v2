@@ -3,3 +3,7 @@ raw_videos/
 *.zip
 .DS_Store
 legacy_source/
+models/
+artifacts/
+__pycache__/
+.ipynb_checkpoints/
