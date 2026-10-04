@@ -108,8 +108,8 @@ def save_model(model, classes, input_size, save_path):
 
 if __name__ == "__main__":
     base_dir = os.path.join(os.path.dirname(__file__), "..")
-    csv_path = os.path.join(base_dir, "artifacts", "features.csv")
-    save_path = os.path.join(base_dir, "models", "lstm_e500.pth")
+    csv_path = os.path.join(base_dir, "data", "processed", "features.csv")
+    save_path = os.path.join(base_dir, "outputs", "models", "lstm_e500.pth")
 
     X, y, classes = load_data(csv_path)
 

@@ -19,7 +19,7 @@ def calculate_euclidean_distance(point1, point2):
     return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
 
 # MediaPipe Hands 초기화 (옛 solutions API는 삭제됨 -> tasks API로 교체)
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "models", "hand_landmarker.task")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "outputs", "models", "hand_landmarker.task")
 hands = vision.HandLandmarker.create_from_options(
     vision.HandLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=MODEL_PATH),
@@ -135,6 +135,6 @@ def process_all_videos(root_directory, output_csv):
 
 if __name__ == "__main__":
     # 루트 디렉토리 및 출력 CSV 파일 설정
-    root_directory = os.path.join(os.path.dirname(__file__), "..", "raw_videos")
-    output_csv = os.path.join(os.path.dirname(__file__), "..", "artifacts", "features.csv")
+    root_directory = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw_videos")
+    output_csv = os.path.join(os.path.dirname(__file__), "..", "..", "data", "processed", "features.csv")
     process_all_videos(root_directory, output_csv)
