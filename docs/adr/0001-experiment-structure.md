@@ -26,7 +26,7 @@ Proposed
           ↓
   src/run_experiments.py   모델별 점수 비교  →  outputs/results.csv
           ↓
-  src/train_model.py       선택한 모델 최종 학습  →  outputs/models/
+  src/train.py             선택한 모델 최종 학습  →  outputs/models/
 ```
 
 규칙: 모든 모델은 `fit` / `predict`를 가지며 `src/models/`의 `MODELS` dict에 이름으로 등록한다.
