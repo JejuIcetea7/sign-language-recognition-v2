@@ -1,9 +1,8 @@
-raw_videos/
-*.mp4
-*.zip
 .DS_Store
-legacy_source/
-models/
-artifacts/
 __pycache__/
 .ipynb_checkpoints/
+*.zip
+*.mp4
+/data/
+/outputs/
+/legacy/
