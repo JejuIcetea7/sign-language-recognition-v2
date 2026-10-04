@@ -31,6 +31,15 @@ class SklearnClassifier:
     def predict(self, X):
         return self.model.predict(self.prepare(X))
 
+    # 저장할 상태: 하이퍼파라미터와 학습된 scikit-learn 모델
+    def get_state(self):
+        return {"params": self.params, "estimator": self.model}
+
+    # 저장된 상태로 모델을 복원
+    def set_state(self, state):
+        self.params = state["params"]
+        self.model = state["estimator"]
+
 
 class HistGB(SklearnClassifier):
     fill_nan = False  # NaN을 그대로 처리함

@@ -2,12 +2,14 @@
 - LSTM 모델 정의와 학습
 - 모든 모델이 같은 방식(fit / predict)으로 쓰이도록 LSTMClassifier로 감싼다
 - 입력 X: (샘플 수, 6, 111), 출력 predict: 샘플마다 라벨 번호 하나
+- GRU, CNN은 이 클래스를 상속하고 신경망 구조(build)만 바꿔서 사용한다
 """
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
 
 # LSTM 모델 정의
 class LSTMModel(nn.Module):
@@ -34,26 +36,31 @@ def to_tensor(X):
 # 모델 학습과 예측을 fit / predict로 감싼 클래스
 class LSTMClassifier:
     rnn = nn.LSTM  # 순환 층 종류 (GRU는 이 값만 바꿔서 사용)
+    defaults = {"hidden_size": 64, "num_layers": 2, "dropout_prob": 0.5, "epochs": 500, "learning_rate": 0.001}  # 기본 하이퍼파라미터
 
-    # 하이퍼파라미터 설정 (기본값은 기존 설정과 동일)
-    def __init__(self, hidden_size=64, num_layers=2, dropout_prob=0.5, epochs=500, learning_rate=0.001):
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.dropout_prob = dropout_prob  # 드롭아웃 확률
-        self.epochs = epochs
-        self.learning_rate = learning_rate
+    def __init__(self, **params):
+        unknown = set(params) - set(self.defaults)
+        assert not unknown, f"알 수 없는 하이퍼파라미터: {unknown}"
+        self.params = {**self.defaults, **params}
+
+    # 신경망 구조 만들기 (다른 구조는 이 부분만 바꿔서 사용)
+    def build(self):
+        p = self.params
+        return LSTMModel(self.input_size, p["hidden_size"], p["num_layers"], self.num_classes, p["dropout_prob"], self.rnn)
 
     def fit(self, X, y):
         torch.manual_seed(42)  # 폴드마다 같은 조건으로 학습
         X = to_tensor(X)
         y = torch.tensor(y, dtype=torch.long)
 
-        self.model = LSTMModel(X.shape[2], self.hidden_size, self.num_layers, len(np.unique(y)), self.dropout_prob, self.rnn)
+        self.input_size = X.shape[2]
+        self.num_classes = len(np.unique(y))
+        self.model = self.build()
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        optimizer = optim.Adam(self.model.parameters(), lr=self.params["learning_rate"])
 
         self.model.train()
-        for epoch in range(self.epochs):
+        for epoch in range(self.params["epochs"]):
             # 순전파
             outputs = self.model(X)
             loss = criterion(outputs, y)
@@ -64,10 +71,27 @@ class LSTMClassifier:
             optimizer.step()
 
             if (epoch + 1) % 100 == 0:
-                print(f"Epoch [{epoch + 1}/{self.epochs}], Loss: {loss.item():.4f}")
+                print(f"Epoch [{epoch + 1}/{self.params['epochs']}], Loss: {loss.item():.4f}")
 
     def predict(self, X):
         self.model.eval()
         with torch.no_grad():
             outputs = self.model(to_tensor(X))
         return outputs.argmax(dim=1).numpy()
+
+    # 저장할 상태: 모델 구조를 다시 만들 값과 가중치(state_dict)만 저장
+    def get_state(self):
+        return {
+            "params": self.params,
+            "input_size": self.input_size,
+            "num_classes": self.num_classes,
+            "weights": self.model.state_dict(),
+        }
+
+    # 저장된 상태로 모델을 복원
+    def set_state(self, state):
+        self.params = state["params"]
+        self.input_size = state["input_size"]
+        self.num_classes = state["num_classes"]
+        self.model = self.build()
+        self.model.load_state_dict(state["weights"])
