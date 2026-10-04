@@ -4,6 +4,7 @@
 """
 
 import os
+import sys
 from datetime import datetime
 import numpy as np
 import pandas as pd
@@ -41,7 +42,8 @@ if __name__ == "__main__":
     folds = make_folds(y)
 
     results = []
-    for name, Model in MODELS.items():
+    for name in sys.argv[1:] or MODELS:  # 이름을 주면 그 모델만 실행
+        Model = MODELS[name]
         print(f"[{name}]")
         scores = run_experiment(Model, X, y, folds)
         print(f"  평균 정확도: {np.mean(scores) * 100:.2f}% (표준편차 {np.std(scores) * 100:.2f}%)")
