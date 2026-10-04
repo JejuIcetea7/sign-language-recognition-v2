@@ -1,0 +1,10 @@
+numpy==2.5.3
+pandas==3.0.6
+scikit-learn==1.9.1
+joblib==1.6.0
+torch==2.14.1
+opencv-python==5.0.0.93
+mediapipe==1.0.0  # 1.0.1은 macOS에서 손 인식 모델 생성 시 크래시 (docs/adr/0002-pin-mediapipe.md)
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
