@@ -19,14 +19,14 @@ learning_rate = 0.001
 
 # LSTM 모델 정의
 class LSTMModel(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout_prob=0.5):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout_prob=0.5, rnn=nn.LSTM):
         super(LSTMModel, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout_prob if num_layers > 1 else 0)
+        self.rnn = rnn(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout_prob if num_layers > 1 else 0)
         self.dropout = nn.Dropout(dropout_prob)
         self.fc = nn.Linear(hidden_size, num_classes)
 
     def forward(self, x):
-        out, _ = self.lstm(x)  # 초기 은닉 상태는 기본값(0)
+        out, _ = self.rnn(x)  # 초기 은닉 상태는 기본값(0)
         out = out[:, -1, :]  # 마지막 time step의 출력 사용
         out = self.dropout(out)
         out = self.fc(out)
@@ -41,12 +41,14 @@ def to_tensor(X):
 
 # 모델 학습과 예측을 fit / predict로 감싼 클래스
 class LSTMClassifier:
+    rnn = nn.LSTM  # 순환 층 종류 (GRU는 이 값만 바꿔서 사용)
+
     def fit(self, X, y):
         torch.manual_seed(42)  # 폴드마다 같은 조건으로 학습
         X = to_tensor(X)
         y = torch.tensor(y, dtype=torch.long)
 
-        self.model = LSTMModel(X.shape[2], hidden_size, num_layers, len(np.unique(y)), dropout_prob)
+        self.model = LSTMModel(X.shape[2], hidden_size, num_layers, len(np.unique(y)), dropout_prob, self.rnn)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
 
