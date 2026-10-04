@@ -9,14 +9,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-# 하이퍼파라미터 설정
-hidden_size = 64
-num_layers = 2
-dropout_prob = 0.5  # 드롭아웃 확률
-epochs = 500
-learning_rate = 0.001
-
-
 # LSTM 모델 정의
 class LSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout_prob=0.5, rnn=nn.LSTM):
@@ -43,17 +35,25 @@ def to_tensor(X):
 class LSTMClassifier:
     rnn = nn.LSTM  # 순환 층 종류 (GRU는 이 값만 바꿔서 사용)
 
+    # 하이퍼파라미터 설정 (기본값은 기존 설정과 동일)
+    def __init__(self, hidden_size=64, num_layers=2, dropout_prob=0.5, epochs=500, learning_rate=0.001):
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.dropout_prob = dropout_prob  # 드롭아웃 확률
+        self.epochs = epochs
+        self.learning_rate = learning_rate
+
     def fit(self, X, y):
         torch.manual_seed(42)  # 폴드마다 같은 조건으로 학습
         X = to_tensor(X)
         y = torch.tensor(y, dtype=torch.long)
 
-        self.model = LSTMModel(X.shape[2], hidden_size, num_layers, len(np.unique(y)), dropout_prob, self.rnn)
+        self.model = LSTMModel(X.shape[2], self.hidden_size, self.num_layers, len(np.unique(y)), self.dropout_prob, self.rnn)
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+        optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
         self.model.train()
-        for epoch in range(epochs):
+        for epoch in range(self.epochs):
             # 순전파
             outputs = self.model(X)
             loss = criterion(outputs, y)
@@ -64,7 +64,7 @@ class LSTMClassifier:
             optimizer.step()
 
             if (epoch + 1) % 100 == 0:
-                print(f"Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}")
+                print(f"Epoch [{epoch + 1}/{self.epochs}], Loss: {loss.item():.4f}")
 
     def predict(self, X):
         self.model.eval()
