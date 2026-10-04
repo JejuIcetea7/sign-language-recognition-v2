@@ -76,8 +76,8 @@ def extract_frame_features(frame):
     return left_hand_distances + right_hand_distances + [distance_between_hands]
 
 
-# 비디오를 처리하고 키포인트 간 거리와 두 손 중심 간 거리를 추출
-def process_video(video_path, label):
+# 영상 하나에서 6프레임의 키포인트 간 거리와 두 손 중심 간 거리를 추출 (라벨 없이 숫자만, 학습 데이터 생성과 서빙에서 같이 사용)
+def extract_video_features(video_path):
     cap = cv2.VideoCapture(video_path)
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -96,11 +96,15 @@ def process_video(video_path, label):
         ret, frame = cap.read()
         if not ret:  # 영상이 깨져서 해당 시점을 못 읽으면 건너뜀
             continue
-        row_data = extract_frame_features(frame) + [label]
-        data.append(row_data)
+        data.append(extract_frame_features(frame))
 
     cap.release()
-    return data
+    return np.array(data, dtype=float)  # (6, 111), 인식 안 된 손은 NaN
+
+
+# 영상 하나를 학습 데이터 행(특징 111개 + 라벨) 6개로 변환
+def process_video(video_path, label):
+    return [row + [label] for row in extract_video_features(video_path).tolist()]
 
 def process_all_videos(root_directory, output_csv):
     """ 모든 폴더의 동영상을 처리하고 CSV 파일로 저장하는 함수 """
