@@ -1,4 +1,4 @@
-# 0003. Latency와 동시요청 측정
+# 0003. Latency와 동시요청 측정 (6프레임, seek 읽기)
 
 측정 코드: `src/benchmark.py`  
 환경: 개발 맥 (Apple M5), CPU 추론, 영상 1개(`person1_add (1).mp4`)를 반복 호출, 워밍업 1회 제외  
