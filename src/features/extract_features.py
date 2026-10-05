@@ -4,6 +4,10 @@
 """
 
 import os
+import queue
+import threading
+from collections import Counter
+
 import cv2
 import numpy as np
 import pandas as pd
@@ -79,9 +83,9 @@ def extract_frame_features(frame):
 frames_per_video = 24  # 영상당 뽑는 프레임 수 (data/load.py의 timesteps와 같아야 함, docs/adr/0005-sequence-length-24.md)
 
 
-# 영상에서 24프레임의 이미지를 읽음
+# 영상에서 24프레임의 이미지를 읽는 순서대로 하나씩 내보냄
 # 영상 앞에서부터 한 번만 훑으면서 필요한 프레임만 이미지로 꺼낸다 (프레임마다 이동하는 방식을 쓰지 않음, docs/adr/0006-sequential-reading.md)
-def read_frames(video_path):
+def iter_frames(video_path):
     cap = cv2.VideoCapture(video_path)
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -91,24 +95,56 @@ def read_frames(video_path):
     # -> fps가 흔들려도, 영상이 3초보다 짧아도 항상 영상당 정확히 24행이 나옴 (영상 경계가 행 24개 단위와 항상 일치)
     window = min(duration, 3)
     sample_times = [window * k / frames_per_video for k in range(1, frames_per_video + 1)]
-    wanted = [min(round(t * frame_rate), total_frames - 1) for t in sample_times]
+    wanted = Counter(min(round(t * frame_rate), total_frames - 1) for t in sample_times)  # 프레임 번호: 필요한 횟수
 
-    frames = {}
-    for frame_idx in range(max(wanted) + 1):
-        if not cap.grab():  # 영상이 깨져서 더 못 읽으면 멈춤
-            break
-        if frame_idx in wanted:
-            ret, frame = cap.retrieve()
-            if ret:
-                frames[frame_idx] = frame
+    try:
+        for frame_idx in range(max(wanted) + 1):
+            if not cap.grab():  # 영상이 깨져서 더 못 읽으면 멈춤
+                break
+            if frame_idx in wanted:
+                ret, frame = cap.retrieve()
+                if ret:  # 못 읽은 프레임은 건너뜀
+                    for _ in range(wanted[frame_idx]):
+                        yield frame
+    finally:
+        cap.release()
 
-    cap.release()
-    return [frames[i] for i in wanted if i in frames]  # 못 읽은 프레임은 건너뜀
+
+# 24프레임의 이미지를 한꺼번에 읽음
+def read_frames(video_path):
+    return list(iter_frames(video_path))
 
 
 # 영상 하나에서 24프레임의 키포인트 간 거리와 두 손 중심 간 거리를 추출 (라벨 없이 숫자만, 학습 데이터 생성과 서빙에서 같이 사용)
+# 읽는 스레드가 프레임을 큐에 넣고, 이 스레드가 꺼내는 대로 MediaPipe로 처리한다 (읽는 동안 처리가 겹침, docs/experiments/0008-overlap-read-and-process.md)
 def extract_video_features(video_path):
-    data = [extract_frame_features(frame) for frame in read_frames(video_path)]
+    frames = queue.Queue(maxsize=4)  # 읽기가 처리보다 너무 앞서가지 않도록 제한
+    stop = threading.Event()
+
+    def put(item):
+        while not stop.is_set():
+            try:
+                frames.put(item, timeout=0.1)
+                return
+            except queue.Full:
+                pass
+
+    def reader():
+        try:
+            for frame in iter_frames(video_path):
+                put(frame)
+        finally:
+            put(None)  # 끝 표시
+
+    thread = threading.Thread(target=reader, daemon=True)
+    thread.start()
+    data = []
+    try:
+        while (frame := frames.get()) is not None:
+            data.append(extract_frame_features(frame))
+    finally:
+        stop.set()  # 처리 중 오류가 나도 읽는 스레드가 멈추도록 함
+        thread.join()
     return np.array(data, dtype=float)  # (24, 111), 인식 안 된 손은 NaN
 
 
