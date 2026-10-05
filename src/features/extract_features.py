@@ -79,29 +79,36 @@ def extract_frame_features(frame):
 frames_per_video = 24  # 영상당 뽑는 프레임 수 (data/load.py의 timesteps와 같아야 함, docs/adr/0005-sequence-length-24.md)
 
 
-# 영상 하나에서 24프레임의 키포인트 간 거리와 두 손 중심 간 거리를 추출 (라벨 없이 숫자만, 학습 데이터 생성과 서빙에서 같이 사용)
-def extract_video_features(video_path):
+# 영상에서 24프레임의 이미지를 읽음
+# 영상 앞에서부터 한 번만 훑으면서 필요한 프레임만 이미지로 꺼낸다 (프레임마다 이동하는 방식을 쓰지 않음, docs/adr/0006-sequential-reading.md)
+def read_frames(video_path):
     cap = cv2.VideoCapture(video_path)
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     duration = total_frames / frame_rate if frame_rate else 0
 
-    data = []  # 거리 정보를 저장할 리스트
-
     # 영상 길이(최대 3초)를 24구간으로 균등 분할해서 샘플링 시점을 고정
     # -> fps가 흔들려도, 영상이 3초보다 짧아도 항상 영상당 정확히 24행이 나옴 (영상 경계가 행 24개 단위와 항상 일치)
     window = min(duration, 3)
     sample_times = [window * k / frames_per_video for k in range(1, frames_per_video + 1)]
+    wanted = [min(round(t * frame_rate), total_frames - 1) for t in sample_times]
 
-    for t in sample_times:
-        frame_idx = min(round(t * frame_rate), total_frames - 1)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
-        ret, frame = cap.read()
-        if not ret:  # 영상이 깨져서 해당 시점을 못 읽으면 건너뜀
-            continue
-        data.append(extract_frame_features(frame))
+    frames = {}
+    for frame_idx in range(max(wanted) + 1):
+        if not cap.grab():  # 영상이 깨져서 더 못 읽으면 멈춤
+            break
+        if frame_idx in wanted:
+            ret, frame = cap.retrieve()
+            if ret:
+                frames[frame_idx] = frame
 
     cap.release()
+    return [frames[i] for i in wanted if i in frames]  # 못 읽은 프레임은 건너뜀
+
+
+# 영상 하나에서 24프레임의 키포인트 간 거리와 두 손 중심 간 거리를 추출 (라벨 없이 숫자만, 학습 데이터 생성과 서빙에서 같이 사용)
+def extract_video_features(video_path):
+    data = [extract_frame_features(frame) for frame in read_frames(video_path)]
     return np.array(data, dtype=float)  # (24, 111), 인식 안 된 손은 NaN
 
 
