@@ -8,3 +8,4 @@ mediapipe==1.0.0  # 1.0.1은 macOS에서 손 인식 모델 생성 시 크래시 
 fastapi==0.142.2
 uvicorn[standard]==0.54.0
 python-multipart==0.0.32
+httpx==0.28.1  # src/benchmark.py
