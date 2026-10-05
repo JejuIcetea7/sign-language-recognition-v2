@@ -76,7 +76,10 @@ def extract_frame_features(frame):
     return left_hand_distances + right_hand_distances + [distance_between_hands]
 
 
-# 영상 하나에서 6프레임의 키포인트 간 거리와 두 손 중심 간 거리를 추출 (라벨 없이 숫자만, 학습 데이터 생성과 서빙에서 같이 사용)
+frames_per_video = 24  # 영상당 뽑는 프레임 수 (data/load.py의 timesteps와 같아야 함, docs/adr/0005-sequence-length-24.md)
+
+
+# 영상 하나에서 24프레임의 키포인트 간 거리와 두 손 중심 간 거리를 추출 (라벨 없이 숫자만, 학습 데이터 생성과 서빙에서 같이 사용)
 def extract_video_features(video_path):
     cap = cv2.VideoCapture(video_path)
     frame_rate = cap.get(cv2.CAP_PROP_FPS)
@@ -85,10 +88,10 @@ def extract_video_features(video_path):
 
     data = []  # 거리 정보를 저장할 리스트
 
-    # 영상 길이(최대 3초)를 6구간으로 균등 분할해서 샘플링 시점을 고정
-    # -> fps가 흔들려도, 영상이 3초보다 짧아도 항상 영상당 정확히 6행이 나옴 (영상 경계가 행 6개 단위와 항상 일치)
+    # 영상 길이(최대 3초)를 24구간으로 균등 분할해서 샘플링 시점을 고정
+    # -> fps가 흔들려도, 영상이 3초보다 짧아도 항상 영상당 정확히 24행이 나옴 (영상 경계가 행 24개 단위와 항상 일치)
     window = min(duration, 3)
-    sample_times = [window * k / 6 for k in range(1, 7)]
+    sample_times = [window * k / frames_per_video for k in range(1, frames_per_video + 1)]
 
     for t in sample_times:
         frame_idx = min(round(t * frame_rate), total_frames - 1)
@@ -99,10 +102,10 @@ def extract_video_features(video_path):
         data.append(extract_frame_features(frame))
 
     cap.release()
-    return np.array(data, dtype=float)  # (6, 111), 인식 안 된 손은 NaN
+    return np.array(data, dtype=float)  # (24, 111), 인식 안 된 손은 NaN
 
 
-# 영상 하나를 학습 데이터 행(특징 111개 + 라벨) 6개로 변환
+# 영상 하나를 학습 데이터 행(특징 111개 + 라벨) 24개로 변환
 def process_video(video_path, label):
     return [row + [label] for row in extract_video_features(video_path).tolist()]
 
@@ -140,5 +143,5 @@ def process_all_videos(root_directory, output_csv):
 if __name__ == "__main__":
     # 루트 디렉토리 및 출력 CSV 파일 설정
     root_directory = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw_videos")
-    output_csv = os.path.join(os.path.dirname(__file__), "..", "..", "data", "processed", "features.csv")
+    output_csv = os.path.join(os.path.dirname(__file__), "..", "..", "data", "processed", f"features_{frames_per_video}.csv")
     process_all_videos(root_directory, output_csv)
