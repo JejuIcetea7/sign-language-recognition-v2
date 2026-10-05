@@ -6,6 +6,7 @@
 import os
 
 from data import load_data
+from data.load import timesteps
 from models import MODELS, save_model
 
 # 실험으로 고른 모델과 하이퍼파라미터
@@ -15,8 +16,8 @@ params = {"hidden_size": 384, "num_layers": 2, "dropout_prob": 0.3, "epochs": 20
 
 if __name__ == "__main__":
     base_dir = os.path.join(os.path.dirname(__file__), "..")
-    csv_path = os.path.join(base_dir, "data", "processed", "features.csv")
-    save_path = os.path.join(base_dir, "outputs", "models", f"{model_name}.joblib")
+    csv_path = os.path.join(base_dir, "data", "processed", f"features_{timesteps}.csv")
+    save_path = os.path.join(base_dir, "outputs", "models", f"{model_name}_{timesteps}f.joblib")  # 파일명에 프레임 수를 넣어 구분
 
     X, y, classes = load_data(csv_path)
 

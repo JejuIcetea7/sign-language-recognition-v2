@@ -45,7 +45,7 @@ def predict(file: UploadFile = File(...)):
     try:
         with lock:
             label = predict_video(tmp_path, state["model"], state["classes"])
-    except ValueError as e:  # 영상이 아니거나 프레임을 못 읽어서 특징 모양이 (6, 111)이 아닌 경우
+    except ValueError as e:  # 영상이 아니거나 프레임을 못 읽어서 특징 모양이 (24, 111)이 아닌 경우
         raise HTTPException(status_code=422, detail=str(e))
     finally:
         os.remove(tmp_path)

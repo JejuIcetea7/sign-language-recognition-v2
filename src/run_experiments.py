@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from data import load_data, make_folds
+from data.load import timesteps
 from models import MODELS
 
 
@@ -35,7 +36,7 @@ def save_results(results, save_path):
 
 if __name__ == "__main__":
     base_dir = os.path.join(os.path.dirname(__file__), "..")
-    csv_path = os.path.join(base_dir, "data", "processed", "features.csv")
+    csv_path = os.path.join(base_dir, "data", "processed", f"features_{timesteps}.csv")
     save_path = os.path.join(base_dir, "outputs", "results.csv")
 
     X, y, classes = load_data(csv_path)
