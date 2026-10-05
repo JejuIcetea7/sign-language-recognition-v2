@@ -9,11 +9,10 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-import cv2
 import httpx
 import numpy as np
 
-from features.extract_features import extract_frame_features, frames_per_video
+from features.extract_features import extract_frame_features, read_frames
 from models import load_model
 from predict import default_model_path
 
@@ -25,17 +24,7 @@ def percentiles(times):
 # 영상 하나의 읽기 / MediaPipe / 모델 시간을 따로 잰다 (샘플링 시점은 extract_video_features와 같다)
 def run_stages(video_path, model):
     t0 = time.perf_counter()
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    window = min(total / fps if fps else 0, 3)
-    frames = []
-    for k in range(1, frames_per_video + 1):
-        cap.set(cv2.CAP_PROP_POS_FRAMES, min(round(window * k / frames_per_video * fps), total - 1))
-        ret, frame = cap.read()
-        if ret:
-            frames.append(frame)
-    cap.release()
+    frames = read_frames(video_path)
     t1 = time.perf_counter()
 
     features = np.array([extract_frame_features(f) for f in frames], dtype=float)
